@@ -74,6 +74,7 @@ public final class QuoteSyncJob {
 
 
                 Stock stock = quotes.get(symbol);
+
                 if (stock==null || (stock.getQuote()).getPrice()==null){
                     Intent intent = new Intent(ACTION_INVALID_STOCK);
                     intent.putExtra("symbol", symbol);

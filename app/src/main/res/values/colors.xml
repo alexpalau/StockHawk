@@ -10,6 +10,7 @@
 
     <color name="chart_background">#7a7e7e</color>
     <color name="transparent">#00fdfdfd</color>
+    <color name="material_grey_900">#212121</color>
 
 
 </resources>

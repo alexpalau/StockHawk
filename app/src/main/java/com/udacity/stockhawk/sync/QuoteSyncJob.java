@@ -74,16 +74,16 @@ public final class QuoteSyncJob {
 
 
                 Stock stock = quotes.get(symbol);
-                final StockQuote quote = stock.getQuote();
-
-
-                if (quote.getPrice()==null){
+                if (stock==null || (stock.getQuote()).getPrice()==null){
                     Intent intent = new Intent(ACTION_INVALID_STOCK);
                     intent.putExtra("symbol", symbol);
                     context.sendBroadcast(intent);
                     continue;
 
                 }
+                final StockQuote quote = stock.getQuote();
+
+
 
                     float price = quote.getPrice().floatValue();
                     float change = quote.getChange().floatValue();

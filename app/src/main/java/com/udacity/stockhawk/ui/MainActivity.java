@@ -1,6 +1,9 @@
 package com.udacity.stockhawk.ui;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -28,6 +31,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import timber.log.Timber;
 
+import static com.udacity.stockhawk.sync.QuoteSyncJob.ACTION_DATA_UPDATED;
+import static com.udacity.stockhawk.sync.QuoteSyncJob.ACTION_INVALID_STOCK;
+
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
         SwipeRefreshLayout.OnRefreshListener,
         StockAdapter.StockAdapterOnClickHandler {
@@ -44,9 +50,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     TextView error;
     private StockAdapter adapter;
 
+    NewStockBroadcastReceiver mNewStockReceiver;
+    IntentFilter mNewStockIntentFilter;
+
     @Override
     public void onClick(String symbol) {
         Timber.d("Symbol clicked: %s", symbol);
+        Intent i = new Intent(this, DetailActivity.class);
+        i.setData(Contract.Quote.makeUriForStock(symbol));
+        startActivity(i);
     }
 
     @Override
@@ -59,6 +71,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         adapter = new StockAdapter(this, this);
         stockRecyclerView.setAdapter(adapter);
         stockRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        mNewStockIntentFilter = new IntentFilter();
+        mNewStockReceiver = new NewStockBroadcastReceiver();
+        mNewStockIntentFilter.addAction(ACTION_INVALID_STOCK);
 
         swipeRefreshLayout.setOnRefreshListener(this);
         swipeRefreshLayout.setRefreshing(true);
@@ -78,6 +94,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 String symbol = adapter.getSymbolAtPosition(viewHolder.getAdapterPosition());
                 PrefUtils.removeStock(MainActivity.this, symbol);
                 getContentResolver().delete(Contract.Quote.makeUriForStock(symbol), null, null);
+                Intent dataUpdatedIntent = new Intent(ACTION_DATA_UPDATED);
+                getApplicationContext().sendBroadcast(dataUpdatedIntent);
             }
         }).attachToRecyclerView(stockRecyclerView);
 
@@ -135,7 +153,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         return new CursorLoader(this,
                 Contract.Quote.URI,
-                Contract.Quote.QUOTE_COLUMNS.toArray(new String[]{}),
+                Contract.Quote.QUOTE_COLUMNS,
                 null, null, Contract.Quote.COLUMN_SYMBOL);
     }
 
@@ -182,8 +200,37 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             PrefUtils.toggleDisplayMode(this);
             setDisplayModeMenuItemIcon(item);
             adapter.notifyDataSetChanged();
+            Intent dataUpdatedIntent = new Intent(ACTION_DATA_UPDATED);
+            getApplicationContext().sendBroadcast(dataUpdatedIntent);
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(mNewStockReceiver, mNewStockIntentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(mNewStockReceiver);
+    }
+
+    private class NewStockBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if(action.equals(ACTION_INVALID_STOCK)){
+                swipeRefreshLayout.setRefreshing(false);
+                String symbol = intent.getStringExtra("symbol");
+                PrefUtils.removeStock(MainActivity.this, symbol);
+                getContentResolver().delete(Contract.Quote.makeUriForStock(symbol), null, null);
+                Toast.makeText(context, R.string.no_stock, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
 }

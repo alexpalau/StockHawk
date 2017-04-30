@@ -1,3 +1,10 @@
 <resources>
     <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="chart_description">12sp</dimen>
+
+    <!--Widget-->
+    <dimen name="widget_stock_default_height">180dp</dimen>
+    <dimen name="widget_stock_min_resize_height">@dimen/widget_stock_default_height</dimen>
+    <dimen name="widget_stock_default_width">250dp</dimen>
+    <dimen name="widget_stock_min_resize_width">220dp</dimen>
 </resources>
